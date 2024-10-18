@@ -73,6 +73,45 @@ app.get('/api/news-titles', async (req, res) => {
 
 
 
+app.get('/api/headlines', async (req, res) => {
+  try {
+    let page = 1;
+    let allNewsItems = [];
+    let hasMore = true;
+
+    while (hasMore) {
+      const url = `https://app.rwa.xyz/api/trpc/news.paginateArticles?batch=1&input=%7B%220%22%3A%7B%22page%22%3A${page}%2C%22perPage%22%3A100%2C%22query%22%3A%7B%22published%22%3Atrue%7D%7D%7D`;
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+          'Accept': 'application/json',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Connection': 'keep-alive',
+        },
+        timeout: 5000
+      });
+
+      const newsItems = response.data[0].result.data.results.map(article => ({
+        title: article.summary.title,
+        url: article.url,
+        date: article.summary.published_date
+      }));
+
+      allNewsItems = allNewsItems.concat(newsItems);
+      hasMore = newsItems.length === 100;
+      page++;
+
+      // Optional: Add a limit to prevent excessive requests
+      if (allNewsItems.length >= 500) break;
+    }
+
+    res.status(200).json(allNewsItems);
+  } catch (error) {
+    console.error('Error:', error.response?.data || error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Start the server
 app.listen(3000, () => {
